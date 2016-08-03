@@ -1,1 +1,3 @@
 testingFiles/**
+config.yml
+__pycache__/**

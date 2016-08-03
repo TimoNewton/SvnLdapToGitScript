@@ -1,0 +1,9 @@
+default_email_domain: foo.bar
+ldap:
+  user_context:
+    DC:
+      -variable1
+      -variable2
+    OU:
+      -variable1
+      -variable2
