@@ -1,9 +1,16 @@
-default_email_domain: foo.bar
+default_email_domain: foo.bar #users email domain
 ldap:
   user_context:
-    DC:
-      -variable1
-      -variable2
     OU:
-      -variable1
-      -variable2
+      - example1
+      - example2
+    DC:
+      - example3
+      - example4
+  connection_string: 'ldaps://foo.bar:8888' #connection string for your ldap server
+  search_filter: 'cn=*'
+  retrieve_attributes: #LDAP attributes that you want to retrieve.
+  #while mmore can be expected these 3 entries are expected.
+    - name
+    - email
+    - displayName

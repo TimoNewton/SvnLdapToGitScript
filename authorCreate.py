@@ -1,16 +1,34 @@
 import ldap
 import getpass
+import yaml
 
-default_email_domain = '@productiveedge.com' # Default domain to apply as the authors email
-ldap_user_context = 'OU=PE Users,OU=Destiny Vitality,OU=US,DC=dhna,DC=corp' #context used for SSL connection to LDAP.
+def read_config(config_file):
+    """Open the external configuration file and read the appropriate variables"""
+    with open(config_file, 'r') as ymlfile:
+        cfg = yaml.load(ymlfile)
+    email_domain = cfg['default_email_domain'] #read the configured email domain
+    ldap_config = cfg['ldap'] #get ldap configuration
+    baseDN_list = [] #create empty list to populate with baseDN from file
+    for section in ldap_config['user_context']:
+        for item in ldap_config['user_context'][section]:
+            baseDN_list.append(section + "=" + item)
+    ldap_user_context={}
+    ldap_user_context['baseDN'] = ",".join(baseDN_list)
+    ldap_user_context['connection_string'] = ldap_config['connection_string']
+    ldap_user_context['search_filter'] = ldap_config['search_filter']
+    ldap_user_context['retrieve_attributes'] = retrieve_attributes = []
+    for attribute in ldap_config['retrieve_attributes']:
+        ldap_user_context['retrieve_attributes'].append(attribute)
+    return email_domain, ldap_user_context
 
 
-def create_author_file(svn_file,author_file_name):
+def create_author_file(svn_file,author_file_name, config_file):
     """Create an author file to move a subversion repository to git."""
+    email_domain, ldap_user_context = read_config(config_file)
     svn_authors = load_svn_file(svn_file)
     uname = input("Please provide LDAP username")
     upass = getpass.getpass("LDAP password")
-    ldap_users = load_ldap_user_info(uname, upass)
+    ldap_users = load_ldap_user_info(uname, upass,ldap_user_context)
     git_author_file_entries = []
     for svn_author in svn_authors:
         key = svn_author.strip().lower()
@@ -18,17 +36,17 @@ def create_author_file(svn_file,author_file_name):
         ldap_entry = None
         if(key in ldap_users):
             ldap_entry = ldap_users[key]
-        elif(key+"@productiveedge.com" in ldap_users):
-            ldap_entry = ldap_users[key+"@productiveedge.com"]
+        elif(key+"@"+email_domain in ldap_users):
+            ldap_entry = ldap_users[key+"@"+email_domain]
         if(ldap_entry):
             author_name = ldap_entry['displayName'][0].decode()
             if('mail' in ldap_entry):
                 author_email = ldap_entry['mail'][0].decode()
             else:
-                author_email = key + '@productiveedge.com'
+                author_email = key + "@" + email_domain
         else:
             print(key + " not found in ldap")
-            author_email = key + '@productiveedge.com'
+            author_email = key + "@" + email_domain
         git_author_file_entries.append(key + ' = ' + author_name + ' <' + author_email + '>')
     write_author_file(author_file_name,git_author_file_entries)
     return git_author_file_entries
@@ -46,20 +64,20 @@ def load_svn_file(svn_file):
     svn_author_file.close()
     return svn_authors
 
-def load_ldap_user_info(uname, upass):
+def load_ldap_user_info(uname, upass, ldap_user_context):
     """ retrieves user info from LDAP as a dictionary """
 
     try:
         # Initialize the connection
-        l = ldap.initialize('ldaps://adldapus.dhna.corp:636')
+        l = ldap.initialize(ldap_user_context['connection_string'])
         l.protocol_version = ldap.VERSION3
         #username = "CN=" + uname + ", OU=PE Users,OU=Destiny Vitality,OU=US,DC=dhna,DC=corp"
         l.simple_bind_s(uname, upass)
         # Define search specific values
-        baseDN = "OU=PE Users,OU=Destiny Vitality,OU=US,DC=dhna,DC=corp"
+        baseDN = ldap_user_context['baseDN']
         searchScope = ldap.SCOPE_SUBTREE
-        retrieveAttributes = ['name', 'mail', 'displayName']
-        searchFilter = "cn=*"
+        retrieveAttributes = ldap_user_context['retrieve_attributes']
+        searchFilter = ldap_user_context['search_filter']
 
         ldap_result_id = l.search(baseDN, searchScope, searchFilter, retrieveAttributes)
 
