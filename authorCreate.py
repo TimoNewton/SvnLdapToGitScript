@@ -3,7 +3,7 @@ import getpass
 import yaml
 
 def read_config(config_file):
-    """Open the external configuration file and read the appropriate variables"""
+    """Open the external configuration file and read the appropriate variables."""
     with open(config_file, 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
     email_domain = cfg['default_email_domain'] #read the configured email domain
