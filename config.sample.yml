@@ -1,6 +1,12 @@
-default_email_domain: foo.bar #users email domain
+default_email_domain: foo.bar # users email domain
 ldap:
-  user_context:
+  base_dn: # Base domain of the search of ldap
+    ou:
+      - US
+    dc:
+      - dhna
+      - corp
+  user_context: # context information used as part of the username in the credentials
     OU:
       - example1
       - example2
@@ -10,7 +16,7 @@ ldap:
   connection_string: 'ldaps://foo.bar:8888' #connection string for your ldap server
   search_filter: 'cn=*'
   retrieve_attributes: #LDAP attributes that you want to retrieve.
-  #while mmore can be expected these 3 entries are expected.
+  #while more can be expected these 3 entries are expected.
     - name
     - email
     - displayName
